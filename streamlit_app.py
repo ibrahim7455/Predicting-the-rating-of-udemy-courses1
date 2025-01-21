@@ -1,10 +1,22 @@
 import streamlit as st 
 import pandas as pd
+import gzip
+import pickle
 from data_preprocessing import load_and_preprocess_data
 from model import train_model
 
+# Function to save the model as .pkl.gz
+def save_compressed_model(model, filename):
+    with gzip.open(filename, 'wb') as f:
+        pickle.dump(model, f)
+
+# Function to load the model from .pkl.gz
+def load_compressed_model(filename):
+    with gzip.open(filename, 'rb') as f:
+        return pickle.load(f)
+
 def load_data(): 
-    df, X, y, le_title, le_wishlist, scaler = load_and_preprocess_data(r'C:\Users\Test\Downloads\Udemy project\dataset\dataset.csv')
+    df, X, y, le_title, le_wishlist, scaler = load_and_preprocess_data(r'C:\Users\Test\Downloads\Udemy project\dataset\Cleaned_Udemy_data.csv')
     return df, X, y, le_title, le_wishlist, scaler
 
 def main():
@@ -13,7 +25,12 @@ def main():
     # Load and preprocess data
     df, X, y, le_title, le_wishlist, scaler = load_data()
 
+    # Train the model and save it
     rf, X_test, y_test, y_pred, mse, mae, r2 = train_model(X, y)
+    save_compressed_model(rf, 'model.pkl.gz')
+
+    # Load the model from the compressed file
+    rf = load_compressed_model('model.pkl.gz')
 
     # Sidebar for navigation
     page = st.sidebar.selectbox(
@@ -29,7 +46,7 @@ def main():
         # Take user input
         available_titles = list(le_title.classes_)
         search_query = st.text_input('Search for a Course Title')
-        filtered_titles = [title for title in available_titles if search_query.lower() in title.lower()] # filter titles and if it in upper case then convert it to lower case
+        filtered_titles = [title for title in available_titles if search_query.lower() in title.lower()] # filter titles
         selected_title = st.selectbox('Select Course Title', filtered_titles if search_query else available_titles)
         input_data['title'] = selected_title
 
@@ -79,7 +96,6 @@ def main():
 
         st.bar_chart(feature_importance.set_index('feature'))
 
-    
     elif page == 'Dataset Insights': 
         st.header('Dataset Overview')
         
@@ -91,6 +107,11 @@ def main():
         st.subheader('Feature Correlation')
         corr_matrix = X.corr()
         st.dataframe(corr_matrix)
+
+# Run the app
+if __name__ == '__main__':
+    main()
+
 
 # Run the app
 if __name__ == '__main__':
